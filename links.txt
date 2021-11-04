@@ -1,0 +1,139 @@
+https://github.com/Zhongdao/UniTrack
+
+
+
+https://pypi.org/project/elasticsearch
+
+#1 필요 파이썬 패키지 import 
+from elasticsearch import Elasticsearch, helpers
+import logging
+
+#2 엘라스틱서치 호스트(ES_HOST), 데이터 넣을 인덱스 이름(INDEX_NAME) 변수 정의
+ES_HOST = '127.0.0.1:9200'
+INDEX_NAME = '혜진샘 테스트용 인덱스명(영어로)'
+
+#3 엘라스틱서치 객체 생성(생성자 인자로 엘라스틱 서치 호스트 넘김)
+es = Elasticsearch(ES_HOST)
+
+#4 데이터 넣고자 하는 인덱스가 이미 있으면 패스
+if es.indices.exists(index=INDEX_NAME):
+		pass
+		
+#5 데이터 넣고자 하는 인덱스가 없으면 인덱스 새로 생성하기
+else:
+	try:
+		es.indices.create(index=INDEX_NAME, body=get_es_mapping())
+	except Exception as e:
+		logging.warning('[ERROR] error during create index => {}'.format(e))
+
+#6 데이터 넣을 리스트 정의
+docs = []
+
+#7 만든 인덱스 스키마에 따라 딕셔너리를 만들고 리스트에 추가
+docs.append({
+	'_index': INDEX_NAME,
+	'_source': {
+		"입력된 전체이미지"       : "/path/to/이미지.png",
+		"크롭한 이미지"     : "/path/to/크롭이미지.png",
+		"벡터값"         : "0.xxxxx 0.xxxxx ...",
+		"@timestamp": datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+		}
+	})
+
+#8 엘라스틱 서치에 배치로 모두 입력(인덱싱)
+helpers.bulk(es, docs)
+logging.warning('es bulk done')
+
+#5-1 만들고자 하는 인덱스 스키마 정의
+def get_es_mapping():
+    mapping = {
+          "mappings" : {
+            "properties" : {
+              "@timestamp" : {
+                "type" : "date"
+              },
+              "address" : {
+                "type" : "text",
+                "fields" : {
+                  "keyword" : {
+                    "type" : "keyword",
+                    "ignore_above" : 256
+                  }
+                }
+              },
+              "news_date" : {
+                "type" : "integer",
+              },
+              "press" : {
+                "type" : "text",
+                "fields" : {
+                  "keyword" : {
+                    "type" : "keyword",
+                    "ignore_above" : 256
+                  }
+                }
+              },
+              "contributor" : {
+                "type" : "text",
+                "fields" : {
+                  "keyword" : {
+                    "type" : "keyword",
+                    "ignore_above" : 256
+                  }
+                }
+              },
+              "news_title" : {
+                "type" : "text",
+                "fields" : {
+                  "keyword" : {
+                    "type" : "keyword",
+                    "ignore_above" : 256
+                  }
+                }
+              },
+              "news_contents" : {
+                "type" : "text",
+                "fields" : {
+                  "keyword" : {
+                    "type" : "keyword",
+                    "ignore_above" : 256
+                  }
+                }
+              },
+              "origin_src" : {
+                "type" : "text",
+                "fields" : {
+                  "keyword" : {
+                    "type" : "keyword",
+                    "ignore_above" : 256
+                  }
+                }
+              }
+            }
+          }
+        }
+    return mapping
+
+----
+
+- 데이터 검색은 .search를 사용한다
+
+- 같이 보내는 파라미터로는 검색 대상인 인덱스와, 검색 쿼리문을 보내면 된다
+
+- 해당 인덱스의 모든 결과를 확인하고 싶을 때 body는 아래와 같이 작성하면 된다
+
+* 해당 인덱스의 모든 문서 검색
+{
+    "query": {
+        "match_all": {}
+    }
+}
+
+def searchAPI():
+    es = Elasticsearch('[엘라스틱_서버_IP_주소]:9200')
+    
+    index = [검색할_인덱스]
+    body = [검색할_쿼리문]
+    
+    res = es.search(index=index, body=body)
+    #res에 검색 결과가 담겨져 있다 
